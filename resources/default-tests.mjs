@@ -31,5 +31,19 @@ export const defaultSuites = [
         tags: ["default", "feature-extraction"],
         async prepare() {},
         type: "remote",
+    },
+    {
+        name: "Sentence Similarity on cpu",
+        url: "resources/sentence-similarity-cpu/dist/index.html",
+        tags: ["default", "sentence-similarity"],
+        async prepare() {},
+        type: "remote",
+    },
+    {
+        name: "Sentence Similarity on gpu",
+        url: "resources/sentence-similarity-gpu/dist/index.html",
+        tags: ["default", "sentence-similarity"],
+        async prepare() {},
+        type: "remote",
     }
 ];

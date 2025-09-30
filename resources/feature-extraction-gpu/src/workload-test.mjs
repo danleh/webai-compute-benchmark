@@ -14,7 +14,7 @@ async function runFeatureExtraction() {
 
     document.getElementById('sentenceText').textContent = `"${SENTENCE_1}"`;
 
-    const model = await pipeline('feature-extraction', "Xenova/UAE-Large-V1", { device: "webgpu" },);
+    const model = await pipeline('feature-extraction', "Xenova/UAE-Large-V1", { device: "webgpu", dtype: "fp16" },);
 
     const result = await model(SENTENCE_1, { pooling: 'mean', normalize: true });
     const embedding = Array.from(result.data);
