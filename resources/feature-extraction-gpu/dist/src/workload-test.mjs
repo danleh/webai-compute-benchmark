@@ -1,6 +1,6 @@
 import { BenchmarkStep, AsyncBenchmarkStep, AsyncBenchmarkSuite } from "./speedometer-utils/benchmark.mjs";
 import { getAllElements, getElement, forceLayout } from "./speedometer-utils/helpers.mjs";
-import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
 
 export const appName = "Feature extraction on gpu";
 export const appVersion = "1.0.0";
@@ -14,7 +14,7 @@ async function runFeatureExtraction() {
 
     document.getElementById('sentenceText').textContent = `"${SENTENCE_1}"`;
 
-    const model = await pipeline('feature-extraction', "Xenova/UAE-Large-V1", { device: "webgpu", dtype: "fp16" },);
+    const model = await pipeline('feature-extraction', "Xenova/UAE-Large-V1", { device: "webgpu", dtype: "fp32" },);
 
     const result = await model(SENTENCE_1, { pooling: 'mean', normalize: true });
     const embedding = Array.from(result.data);

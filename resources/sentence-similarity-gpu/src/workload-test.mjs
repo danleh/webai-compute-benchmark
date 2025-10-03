@@ -1,6 +1,6 @@
 import { BenchmarkStep, AsyncBenchmarkStep, AsyncBenchmarkSuite } from "/node_modules/speedometer-utils/benchmark.mjs";
 import { getAllElements, getElement, forceLayout } from "/node_modules/speedometer-utils/helpers.mjs";
-import { pipeline, dot } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+import { pipeline, dot } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
 
 export const appName = "Sentence similarity on gpu";
 export const appVersion = "1.0.0";
@@ -14,7 +14,7 @@ async function runSentenceSimilarity() {
 
     document.getElementById('sentenceText').textContent = `"${SENTENCES}"`;
 
-    const model = await pipeline('feature-extraction', "Alibaba-NLP/gte-base-en-v1.5", { device: "webgpu", dtype: "fp16" },);
+    const model = await pipeline('feature-extraction', "Alibaba-NLP/gte-base-en-v1.5", { device: "webgpu", dtype: "fp32" },);
 
     const result = await model(SENTENCES, { pooling: 'cls', normalize: true });
     

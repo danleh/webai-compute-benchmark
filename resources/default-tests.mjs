@@ -45,5 +45,12 @@ export const defaultSuites = [
         tags: ["default", "sentence-similarity"],
         async prepare() {},
         type: "remote",
+    },
+    {
+        name: "Speech Recognition on cpu",
+        url: "resources/speech-recognition-cpu/dist/index.html",
+        tags: ["default", "speech-recognition"],
+        async prepare() {},
+        type: "remote",
     }
 ];
