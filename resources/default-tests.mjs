@@ -20,14 +20,16 @@ export const defaultSuites = [
     },
     {
         name: "Feature Extraction on cpu",
-        url: "resources/feature-extraction-cpu/dist/index.html",
+        url: "resources/transformers-js/dist/index.html",
+        extraParams: { type: 'feature-extraction-cpu' },
         tags: ["default", "feature-extraction"],
         async prepare() {},
         type: "remote",
     },
     {
         name: "Feature Extraction on gpu",
-        url: "resources/feature-extraction-gpu/dist/index.html",
+        url: "resources/transformers-js/dist/index.html",
+        extraParams: { type: 'feature-extraction-gpu' },
         tags: ["default", "feature-extraction"],
         async prepare() {},
         type: "remote",

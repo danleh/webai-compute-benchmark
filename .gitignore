@@ -4,5 +4,8 @@
 .directory
 /node_modules
 
+/resources/transformers-js/node_modules/
+/resources/transformers-js/dist/
+
 .vscode
 .angular
