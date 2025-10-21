@@ -20,6 +20,11 @@ const MODELS_TO_DOWNLOAD = [
         id: 'Xenova/whisper-small', 
         task: 'automatic-speech-recognition', 
         dtype: 'fp32'
+    },
+    { 
+        id: 'Xenova/modnet', 
+        task: 'background-removal', 
+        dtype: 'fp32'
     }
 ];
 

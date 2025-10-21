@@ -59,5 +59,19 @@ export const defaultSuites = [
         tags: ["default", "speech-recognition"],
         async prepare() {},
         type: "remote",
+    },
+        {
+        name: "Background Removal on cpu",
+        url: "resources/transformers-js/dist/background-removal-cpu.html",
+        tags: ["default", "background-removal"],
+        async prepare() {},
+        type: "remote",
+    },
+    {
+        name: "Background Removal on gpu",
+        url: "resources/transformers-js/dist/background-removal-gpu.html",
+        tags: ["default", "background-removal"],
+        async prepare() {},
+        type: "remote",
     }
 ];

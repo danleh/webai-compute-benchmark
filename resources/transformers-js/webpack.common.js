@@ -10,6 +10,8 @@ module.exports = {
         'sentence-similarity-gpu': './src/sentence-similarity-gpu.mjs',
         'speech-recognition-cpu': './src/speech-recognition-cpu.mjs',
         'speech-recognition-gpu': './src/speech-recognition-gpu.mjs',
+        'background-removal-cpu': './src/background-removal-cpu.mjs',
+        'background-removal-gpu': './src/background-removal-gpu.mjs',
     },
     plugins: [
         new HtmlWebpackPlugin({
@@ -47,6 +49,18 @@ module.exports = {
             template: path.resolve(__dirname, "src", "index.html"),
             filename: 'speech-recognition-gpu.html',
             chunks: ['speech-recognition-gpu'],
+        }),
+        new HtmlWebpackPlugin({
+            title: "Transfomers.js Runner",
+            template: path.resolve(__dirname, "src", "index.html"),
+            filename: 'background-removal-cpu.html',
+            chunks: ['background-removal-cpu'],
+        }),
+        new HtmlWebpackPlugin({
+            title: "Transfomers.js Runner",
+            template: path.resolve(__dirname, "src", "index.html"),
+            filename: 'background-removal-gpu.html',
+            chunks: ['background-removal-gpu'],
         }),
     ],
     output: {
