@@ -60,7 +60,7 @@ export const defaultSuites = [
         async prepare() {},
         type: "remote",
     },
-        {
+    {
         name: "Background Removal on cpu",
         url: "resources/transformers-js/dist/background-removal-cpu.html",
         tags: ["default", "background-removal"],
@@ -73,5 +73,19 @@ export const defaultSuites = [
         tags: ["default", "background-removal"],
         async prepare() {},
         type: "remote",
-    }
+    },
+    {
+        name: "Image Segmentation on wasm",
+        url: "resources/litert-js/dist/image-segmentation-cpu.html",
+        tags: ["default", "image-segmentation"],
+        async prepare() {},
+        type: "remote",
+    },
+    {
+        name: "Image Segmentation on webgpu",
+        url: "resources/litert-js/dist/image-segmentation-gpu.html",
+        tags: ["default", "image-segmentation"],
+        async prepare() {},
+        type: "remote",
+    },
 ];
