@@ -41,9 +41,16 @@ TODO(dlehmann): Expand on this.
 - Serve the overall runner via `npm run dev` in the repository root directory.
 - Browse to http://localhost:8080, click on run to see the new workload.
 
-### Transformers.js-based workloads
+### LiteRT.js-based workloads
 
- TODO(rezvan): Add steps
+- Inside `resources/litert-js/src/index.mjs`, add a new async function and `ModelConfig` for your workload.
+- Add the name of your model to `MODELS_TO_DOWNLOAD` in `resources/litert-js/src/download-models.mjs`.
+- Add `<your-new-workload-name>.mjs` inside `resources/litert-js/src`, similar to the existing ones.
+- Add an entry and a plugin for the new workload in `resources/litert-js/webpack.commom.js`.
+- Run `npm install` and `npm run build` inside `resources/litert-js` to produce output in `dist/`.
+- Add the workload to `resources/default-tests.mjs`, analogous to the existing workloads.
+- Serve the overall runner via `npm run dev` in the repository root directory.
+- Browse to http://localhost:8080, click on run to see the new workload.
 
 ### Other workloads
 
