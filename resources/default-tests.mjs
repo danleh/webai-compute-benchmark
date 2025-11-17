@@ -117,6 +117,20 @@ export const defaultSuites = [
         type: "remote",
     },
     {
+        name: "Zero-shot Image Classification on wasm",
+        url: "resources/transformers-js/dist/zero-shot-image-classification-cpu.html",
+        tags: ["default", "image-classification"],
+        async prepare() {},
+        type: "remote",
+    },
+    {
+        name: "Zero-shot Image Classification on webgpu",
+        url: "resources/transformers-js/dist/zero-shot-image-classification-gpu.html",
+        tags: ["default", "image-classification"],
+        async prepare() {},
+        type: "remote",
+    },
+    {
         name: "Text to Speech on wasm",
         url: "resources/transformers-js/dist/text-to-speech-cpu.html",
         tags: ["default", "text-to-speech"],

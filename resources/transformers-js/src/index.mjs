@@ -1,7 +1,7 @@
 import { BenchmarkConnector } from "speedometer-utils/benchmark.mjs";
 import { AsyncBenchmarkStep, AsyncBenchmarkSuite } from "speedometer-utils/benchmark.mjs";
 import { forceLayout } from "speedometer-utils/helpers.mjs";
-import { pipeline, env, dot, read_audio, AutoTokenizer, AutoModelForSequenceClassification } from '@huggingface/transformers';
+import { pipeline, env, dot, read_audio, AutoTokenizer, AutoModelForSequenceClassification, SiglipVisionModel, AutoImageProcessor, RawImage, SiglipTextModel, softmax } from '@huggingface/transformers';
 import { KokoroTTS } from "kokoro-js";
 import jfkAudio from '../../media/jfk_1962_0912_spaceeffort.wav';
 import imageWithBackground from '../../media/image.jpg';
@@ -211,6 +211,45 @@ class ImageClassification {
   }
 }
 
+/*--------- Zero-shot image classification workload using Marqo/marqo-fashionSigLIP ---------*/
+
+class ZeroShotImageClassification {
+  constructor(device) {
+    this.device = device;
+    this.imageURL = imageWithBackground;
+    this.texts = ['a hat', 'a t-shirt', 'a hand', 'an origami'];
+  }
+  async init() {
+    document.getElementById('device').textContent = this.device;
+    document.getElementById('workload').textContent = "zero-shot image classification";
+    document.getElementById('input').textContent = `Classifying an image against the following labels: ${JSON.stringify(this.texts)}`;
+    
+    const model_id = "Marqo/marqo-fashionSigLIP";
+
+    this.tokenizer = await AutoTokenizer.from_pretrained(model_id);
+    this.text_model = await SiglipTextModel.from_pretrained(model_id, { device: this.device, dtype: "q4f16" });
+    this.processor = await AutoImageProcessor.from_pretrained(model_id);
+    this.vision_model = await SiglipVisionModel.from_pretrained(model_id, { device: this.device, dtype: "q4f16" });
+
+    this.text_inputs = this.tokenizer(this.texts, { padding: 'max_length', truncation: true });
+    const image = await RawImage.read(this.imageURL);
+    this.image_inputs = await this.processor(image);
+  }
+
+  async run() {
+    const { text_embeds } = await this.text_model(this.text_inputs);
+    const { image_embeds } = await this.vision_model(this.image_inputs);
+
+    const normalized_text_embeds = text_embeds.normalize().tolist();
+    const normalized_image_embeds = image_embeds.normalize().tolist()[0];
+    const text_probs = softmax(normalized_text_embeds.map((text_embed) => 100.0 * dot(normalized_image_embeds, text_embed)));
+
+    const output = document.getElementById('output');
+    // To save spece, we use a smaller model here which results in different output on wasm and webgpu. The result on webgpu seems incorrect when using models other than fp32 model. 
+    output.textContent = JSON.stringify(Object.fromEntries(this.texts.map((text, i) => [text, text_probs[i]])), null, 2);
+  }
+}
+
 /*--------- Text to speech workload using onnx-community/Kokoro-82M-v1.0-ONNX model ---------*/
 
 class TextToSpeech {
@@ -286,6 +325,14 @@ const modelConfigs = {
   'image-classification-gpu': {
     description: 'Image classification on gpu',
     create: () => { return new ImageClassification('webgpu'); },
+  },
+  'zero-shot-image-classification-cpu': {
+    description: 'Zero shot image classification on cpu',
+    create: () => { return new ZeroShotImageClassification('wasm'); },
+  },
+  'zero-shot-image-classification-gpu': {
+    description: 'Zero shot image classification on gpu',
+    create: () => { return new ZeroShotImageClassification('webgpu'); },
   },
   'text-to-speech-cpu': {
     description: 'Text to speech on cpu',

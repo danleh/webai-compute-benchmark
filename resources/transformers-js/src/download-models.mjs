@@ -1,4 +1,4 @@
-import { env, pipeline, SiglipVisionModel } from '@huggingface/transformers';
+import { env, pipeline, SiglipVisionModel, AutoImageProcessor, SiglipTextModel, AutoTokenizer } from '@huggingface/transformers';
 import { KokoroTTS } from "kokoro-js";
 import fs from 'fs';
 import path from 'path';
@@ -85,11 +85,21 @@ async function downloadModels() {
         }
 
         // Download Marqo/marqo-fashionSigLIP model
-        console.log(`Downloading files for Marqo/marqo-fashionSigLIP (image-classification, dtype: q4f16)...`);
+        console.log(`Downloading files for Marqo/marqo-fashionSigLIP (zero-shot-image-classification, dtype: q4f16)...`);
         await SiglipVisionModel.from_pretrained("Marqo/marqo-fashionSigLIP" ,{ 
                     cache_dir: env.localModelPath,
                     dtype: 'q4f16'
                 });
+        await AutoImageProcessor.from_pretrained("Marqo/marqo-fashionSigLIP", {
+            cache_dir: env.localModelPath,
+        });
+        await SiglipTextModel.from_pretrained("Marqo/marqo-fashionSigLIP", {
+            cache_dir: env.localModelPath,
+            dtype: 'q4f16'
+        });
+        await AutoTokenizer.from_pretrained("Marqo/marqo-fashionSigLIP", {
+            cache_dir: env.localModelPath,
+        });
         console.log(`Successfully downloaded and cached Marqo/marqo-fashionSigLIP`);
 
         // Download onnx-community/Kokoro-82M-v1.0-ONNX model

@@ -16,6 +16,8 @@ module.exports = {
         'text-classification-gpu': './src/text-classification-gpu.mjs',
         'image-classification-cpu': './src/image-classification-cpu.mjs',
         'image-classification-gpu': './src/image-classification-gpu.mjs',
+        'zero-shot-image-classification-cpu': './src/zero-shot-image-classification-cpu.mjs',
+        'zero-shot-image-classification-gpu': './src/zero-shot-image-classification-gpu.mjs',
         'text-to-speech-cpu': './src/text-to-speech-cpu.mjs',
         'text-to-speech-gpu': './src/text-to-speech-gpu.mjs',
     },
@@ -91,6 +93,18 @@ module.exports = {
             template: path.resolve(__dirname, "src", "index.html"),
             filename: 'image-classification-gpu.html',
             chunks: ['image-classification-gpu'],
+        }),
+        new HtmlWebpackPlugin({
+            title: "Transfomers.js Runner",
+            template: path.resolve(__dirname, "src", "index.html"),
+            filename: 'zero-shot-image-classification-cpu.html',
+            chunks: ['zero-shot-image-classification-cpu'],
+        }),
+        new HtmlWebpackPlugin({
+            title: "Transfomers.js Runner",
+            template: path.resolve(__dirname, "src", "index.html"),
+            filename: 'zero-shot-image-classification-gpu.html',
+            chunks: ['zero-shot-image-classification-gpu'],
         }),
         new HtmlWebpackPlugin({
             title: "Transfomers.js Runner",
