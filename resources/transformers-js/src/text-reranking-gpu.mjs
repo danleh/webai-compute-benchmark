@@ -1,3 +1,3 @@
 import { initializeBenchmark } from './index.mjs';
 
-initializeBenchmark('text-classification-cpu');
+initializeBenchmark('text-reranking-gpu');

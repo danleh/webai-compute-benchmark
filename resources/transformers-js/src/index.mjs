@@ -11,6 +11,9 @@ Paste below into dev console for manual testing:
 manualRun();
 */
 
+// Workloads and models: https://docs.google.com/spreadsheets/d/1tRzuM34dUpijXcJwHmmK7-JDK6zZHhBPHECvBXEF0n8/edit?usp=sharing
+// Model selection documentation: https://docs.google.com/document/d/1EDyRD5dHxYpONyE_xf_Tb1A3GvNSrLQpp-msCcWNnF0/edit?usp=sharing
+
 // Disable the loading of remote models from the Hugging Face Hub:
 env.localModelPath = '../models';
 env.allowRemoteModels = false;
@@ -126,9 +129,9 @@ class BackgroundRemoval {
   }
 }
 
-/*--------- Text classificatiom workload using mixedbread-ai/mxbai-rerank-base-v1 model ---------*/
+/*--------- Text reranking workload using mixedbread-ai/mxbai-rerank-base-v1 model ---------*/
 
-class TextClassification {
+class TextReranking {
   constructor(device) {
     this.device = device;
     this.query = "Who wrote 'To Kill a Mockingbird'?"
@@ -141,7 +144,7 @@ class TextClassification {
   }
   async init() {
     document.getElementById('device').textContent = this.device;
-    document.getElementById('workload').textContent = "text classification";
+    document.getElementById('workload').textContent = "text reranking";
     document.getElementById('input').textContent = `"${this.documents}"`;
     
     const model_id = 'mixedbread-ai/mxbai-rerank-base-v1';
@@ -226,26 +229,27 @@ class ZeroShotImageClassification {
     
     const model_id = "Marqo/marqo-fashionSigLIP";
 
-    this.tokenizer = await AutoTokenizer.from_pretrained(model_id);
+    this.tokenizer = await AutoTokenizer.from_pretrained(model_id, { device: this.device});
     this.text_model = await SiglipTextModel.from_pretrained(model_id, { device: this.device, dtype: "q4f16" });
-    this.processor = await AutoImageProcessor.from_pretrained(model_id);
+    this.processor = await AutoImageProcessor.from_pretrained(model_id, { device: this.device});
     this.vision_model = await SiglipVisionModel.from_pretrained(model_id, { device: this.device, dtype: "q4f16" });
 
-    this.text_inputs = this.tokenizer(this.texts, { padding: 'max_length', truncation: true });
-    const image = await RawImage.read(this.imageURL);
-    this.image_inputs = await this.processor(image);
+    this.image = await RawImage.read(this.imageURL);
   }
 
   async run() {
-    const { text_embeds } = await this.text_model(this.text_inputs);
-    const { image_embeds } = await this.vision_model(this.image_inputs);
+    const text_inputs = this.tokenizer(this.texts, { padding: 'max_length', truncation: true });
+    const image_inputs = await this.processor(this.image);
+
+    const { text_embeds } = await this.text_model(text_inputs);
+    const { image_embeds } = await this.vision_model(image_inputs);
 
     const normalized_text_embeds = text_embeds.normalize().tolist();
     const normalized_image_embeds = image_embeds.normalize().tolist()[0];
     const text_probs = softmax(normalized_text_embeds.map((text_embed) => 100.0 * dot(normalized_image_embeds, text_embed)));
 
     const output = document.getElementById('output');
-    // To save spece, we use a smaller model here which results in different output on wasm and webgpu. The result on webgpu seems incorrect when using models other than fp32 model. 
+    // To save space, we use a smaller model here which results in different output on wasm and webgpu. The result on webgpu seems incorrect when using models other than fp32 model. 
     output.textContent = JSON.stringify(Object.fromEntries(this.texts.map((text, i) => [text, text_probs[i]])), null, 2);
   }
 }
@@ -270,8 +274,10 @@ class TextToSpeech {
   async run() {
     const result = await this.model.generate(this.text);
     const output = document.getElementById('output');
-    // TODO: find a way to show the duration of the model. result.save("ausio.wav") downloaded an audio file successfully.
-    output.textContent = `Generated audio of length ${result.audio.length}`;
+    const durationInMs = (result.audio.length / 24000) * 1000;
+    // with wasm the ausio file. With webgpu, the size of the audio file and its duration is the same as the wasm generated audio but the audio sounds corrupted.
+    // To get the correct webgpu audio, we should use the fp32 version of the model.
+    output.textContent = `Generated audio of duration ${durationInMs.toFixed(2)} ms`;
   }
 }
 
@@ -310,13 +316,13 @@ const modelConfigs = {
     description: 'Background removal on gpu',
     create: () => { return new BackgroundRemoval('webgpu'); },
   },
-  'text-classification-cpu': {
-    description: 'Text classification on cpu',
-    create: () => { return new TextClassification('wasm'); },
+  'text-reranking-cpu': {
+    description: 'Text reranking on cpu',
+    create: () => { return new TextReranking('wasm'); },
   },
-  'text-classification-gpu': {
-    description: 'Text classification on gpu',
-    create: () => { return new TextClassification('webgpu'); },
+  'text-reranking-gpu': {
+    description: 'Text reranking on gpu',
+    create: () => { return new TextReranking('webgpu'); },
   },
   'image-classification-cpu': {
     description: 'Image classification on cpu',
