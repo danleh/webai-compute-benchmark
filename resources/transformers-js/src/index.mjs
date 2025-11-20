@@ -123,9 +123,11 @@ class BackgroundRemoval {
 
   async run() {
     const result = await this.model(this.imageURL);
+    const canvas = result[0].toCanvas();
     const output = document.getElementById('output');
-    // TODO(rezvan): Add image visualization.
-    output.textContent = result;
+    output.innerHTML = '';
+    output.appendChild(canvas);
+    await new Promise(resolve => setTimeout(resolve, 3000));
   }
 }
 
