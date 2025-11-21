@@ -69,6 +69,7 @@ class SentenceSimilarity {
   }
 
   async run() {
+    // You can ignore the warning in the console: https://github.com/huggingface/transformers.js/issues/736#issuecomment-2101078957
     const result = await this.model(this.SENTENCES, { pooling: 'cls', normalize: true });
     
     const [source_embeddings, ...document_embeddings ] = result.tolist();
@@ -98,7 +99,7 @@ class SpeechRecognition {
   }
 
   async run() {
-    const result = await this.model(this.audioData);
+    const result = await this.model(this.audioData, {language: 'en'});
     const output = document.getElementById('output');
     output.textContent = result.text;
   }
@@ -150,7 +151,6 @@ class TextReranking {
     const model_id = 'mixedbread-ai/mxbai-rerank-base-v1';
     this.model = await AutoModelForSequenceClassification.from_pretrained(model_id, { device: this.device, dtype: "fp32" });
     this.tokenizer = await AutoTokenizer.from_pretrained(model_id);
-
   }
 
     /**
@@ -249,7 +249,7 @@ class ZeroShotImageClassification {
     const text_probs = softmax(normalized_text_embeds.map((text_embed) => 100.0 * dot(normalized_image_embeds, text_embed)));
 
     const output = document.getElementById('output');
-    // To save space, we use a smaller model here which results in different output on wasm and webgpu. The result on webgpu seems incorrect when using models other than fp32 model. 
+    // To save space, we use a smaller model here which results in different output on wasm and webgpu. The result on webgpu seems incorrect when using models other than fp32 model.
     output.textContent = JSON.stringify(Object.fromEntries(this.texts.map((text, i) => [text, text_probs[i]])), null, 2);
   }
 }
@@ -275,7 +275,7 @@ class TextToSpeech {
     const result = await this.model.generate(this.text);
     const output = document.getElementById('output');
     const durationInMs = (result.audio.length / 24000) * 1000;
-    // with wasm the ausio file. With webgpu, the size of the audio file and its duration is the same as the wasm generated audio but the audio sounds corrupted.
+    // With wasm the audio file looks good. With webgpu, the size of the audio file and its duration is the same as the wasm generated audio but the audio sounds corrupted.
     // To get the correct webgpu audio, we should use the fp32 version of the model.
     output.textContent = `Generated audio of duration ${durationInMs.toFixed(2)} ms`;
   }
