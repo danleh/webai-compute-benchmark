@@ -17,7 +17,10 @@ const { driver, PORT, stop } = await testSetup(HELP);
 // the common code. To run all benchmarks, enable this.
 const RUN_FULL_SUITE = false;
 let tags = 'wasm,gpu-test-suite';
-let suites = benchmarkConfigurator.suites.filter(suite => suite.tags.some((tag) => tag === 'wasm' || tag === 'gpu-test-suite'));
+let suites = benchmarkConfigurator.suites.filter(suite =>
+    !suite.url.includes('/experimental/') &&
+    suite.tags.some((tag) => tag === 'wasm' || tag === 'gpu-test-suite')
+);
 let timeout = 10 * ONE_MINUTE_IN_MS;
 
 if (RUN_FULL_SUITE) {
@@ -125,6 +128,11 @@ async function testDeveloperMode() {
 
 async function test() {
     try {
+        benchmarkConfigurator.suites.forEach((suite) => {
+            if (suite.tags.includes("default") && suite.tags.includes("experimental")) {
+                throw new Error(`Suite "${suite.name}" has both 'default' and 'experimental' tags. Experimental workloads should only have the 'experimental' tag, while stable workloads should have the 'default' tag.`);
+            }
+        });
         await driver.manage().setTimeouts({ script: timeout });
         await testIterations();
         await testAll();
