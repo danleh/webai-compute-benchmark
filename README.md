@@ -1,4 +1,4 @@
-# Web AI Workloads
+# Web AI Benchmark
 
 This repository contains interesting AI workloads running on the Web, using WebAssembly (Wasm), WebGPU, and in future WebNN or other underlying technologies.
 Those workloads help us to evaluate the performance of the implementation, e.g., in browsers or JavaScript and WebAssembly runtimes.

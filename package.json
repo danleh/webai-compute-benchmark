@@ -1,7 +1,7 @@
 {
     "name": "webai-compute-benchmark",
-    "version": "0.0.1-alpha",
-    "description": "An open source repository for the WebAI compute benchmark.",
+    "version": "0.0.1",
+    "description": "An open source repository for the Web AI Benchmark.",
     "engines": {
         "node": ">=22.0.0",
         "npm": ">=8.19.3"
