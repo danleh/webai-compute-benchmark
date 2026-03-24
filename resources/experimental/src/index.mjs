@@ -66,8 +66,13 @@ export async function initializeBenchmark(modelType) {
   }
 
   appName = modelConfigs[modelType].description;
-  const benchmark = modelConfigs[modelType].create();
-  await benchmark.init();
+  let benchmark;
+  try {
+    benchmark = modelConfigs[modelType].create();
+    await benchmark.init();
+  } catch (error) {
+    console.error(error);
+  }
 
   /*--------- Running test suites ---------*/
   const suites = {
