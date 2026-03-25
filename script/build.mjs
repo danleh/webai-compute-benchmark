@@ -37,15 +37,22 @@ async function buildWorkload(workloadDir) {
 
 async function updateVersionInfo() {
   const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+
   const gitHash = (await sh(["git", "rev-parse", "HEAD"])).stdoutString.trim();
   const shortGitHash = gitHash.substring(0, 7);
-  const gitLink = `<a href="https://github.com/GoogleChrome/webai-compute-benchmark/commit/${gitHash}" target="_blank">${shortGitHash}</a>`;
+  const gitCommitLink = `<a href="https://github.com/GoogleChrome/webai-compute-benchmark/commit/${gitHash}" target="_blank">${shortGitHash}</a>`;
 
-  let indexHtml = fs.readFileSync("index.html", "utf8");
-  indexHtml = indexHtml.replace(/(<!-- package-version -->)(.*?)(<!-- \/package-version -->)/, `$1${packageJson.version}$3`);
-  indexHtml = indexHtml.replace(/(<!-- git-hash -->)(.*?)(<!-- \/git-hash -->)/, `$1${gitLink}$3`);
-  fs.writeFileSync("index.html", indexHtml);
-  logInfo(`Updated index.html with version ${packageJson.version} and git hash ${shortGitHash}`);
+  const gitDate = (await sh(["git", "log", "-1", "--format=%cs"])).stdoutString.trim();
+  const versionWithDate = `${packageJson.version} (${gitDate})`;
+
+  const files = ["index.html", "about.html"];
+  for (const file of files) {
+    let html = fs.readFileSync(file, "utf8");
+    html = html.replace(/(<!-- package-version -->)(.*?)(<!-- \/package-version -->)/g, `$1${versionWithDate}$3`);
+    html = html.replace(/(<!-- git-commit-link -->)(.*?)(<!-- \/git-commit-link -->)/g, `$1${gitCommitLink}$3`);
+    fs.writeFileSync(file, html);
+    logInfo(`Updated ${file} with version ${versionWithDate}`);
+  }
 }
 
 async function updateLibraryVersionInfo() {
