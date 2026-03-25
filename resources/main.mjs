@@ -464,7 +464,7 @@ class MainBenchmarkClient {
     _updateDocumentTitle(hash) {
         const maybeSection = document.querySelector(hash);
         const sectionTitle = maybeSection?.getAttribute("data-title") ?? "";
-        document.title = `Web AI Benchmark ${sectionTitle}`.trimEnd();
+        document.title = `Web AI Compute Benchmark ${sectionTitle}`.trimEnd();
     }
 
     _removeLocationHash() {
