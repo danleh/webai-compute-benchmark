@@ -419,7 +419,29 @@ export class BenchmarkRunner {
                 try {
                     await this._appendFrame();
                     this._page = new Page(this._frame);
-                    await this.runSuite(suite);
+                    let cleanupErrorListeners;
+                    const errorPromise = new Promise((_, reject) => {
+                        const errorHandler = (e) => {
+                            reject(new Error(`Workload ${suite.name} encountered an error: ${e.message || e.reason}`));
+                        };
+                        window.addEventListener("error", errorHandler, { once: true });
+                        window.addEventListener("unhandledrejection", errorHandler, { once: true });
+                        
+                        cleanupErrorListeners = () => {
+                            window.removeEventListener("error", errorHandler);
+                            window.removeEventListener("unhandledrejection", errorHandler);
+                        };
+                    });
+
+                    try {
+                        await Promise.race([this.runSuite(suite), errorPromise]);
+                    } finally {
+                        if (cleanupErrorListeners) cleanupErrorListeners();
+                    }
+                } catch (error) {
+                    console.error(`Workload ${suite.name} failed:`, error);
+                    this._measuredValues.steps[suite.name] = { total: 0 };
+                    this._client?.didFailSuite?.(suite, error);
                 } finally {
                     this._removeFrame();
                 }
@@ -454,18 +476,27 @@ export class BenchmarkRunner {
         if (this._client?.didRunSuites) {
             let product = 1;
             const values = [];
+            let total = 0;
+            let geomean = 0;
+
             for (const suiteName in this._measuredValues.steps) {
                 const suiteTotal = this._measuredValues.steps[suiteName].total;
-                product *= suiteTotal;
-                values.push(suiteTotal);
+                if (suiteTotal > 0) {
+                    product *= suiteTotal;
+                    values.push(suiteTotal);
+                }
             }
 
-            values.sort((a, b) => a - b); // Avoid the loss of significance for the sum.
-            const total = values.reduce((a, b) => a + b);
-            const geomean = Math.pow(product, 1 / values.length);
+            let mean = 0;
+            if (values.length > 0) {
+                values.sort((a, b) => a - b); // Avoid the loss of significance for the sum.
+                total = values.reduce((a, b) => a + b, 0);
+                geomean = Math.pow(product, 1 / values.length);
+                mean = total / values.length;
+            }
 
             this._measuredValues.total = total;
-            this._measuredValues.mean = total / values.length;
+            this._measuredValues.mean = mean;
             this._measuredValues.geomean = geomean;
             this._measuredValues.score = geomeanToScore(geomean);
             await this._client.didRunSuites(this._measuredValues);
@@ -512,11 +543,15 @@ export class BenchmarkRunner {
         const geomean = getMetric("Geomean");
         const iteration = geomean.length;
         const iterationTotal = iterationMetric(iteration, "Total");
-        for (const results of Object.values(iterationResults))
-            iterationTotal.add(results.total);
+        for (const results of Object.values(iterationResults)) {
+            if (results.total > 0)
+                iterationTotal.add(results.total);
+        }
         iterationTotal.computeAggregatedMetrics();
-        geomean.add(iterationTotal.geomean);
-        getMetric("Score").add(geomeanToScore(iterationTotal.geomean));
+        if (!isNaN(iterationTotal.geomean) && iterationTotal.geomean > 0) {
+            geomean.add(iterationTotal.geomean);
+            getMetric("Score").add(geomeanToScore(iterationTotal.geomean));
+        }
 
         if (params.measurePrepare) {
             const iterationPrepare = iterationMetric(iteration, "Prepare");

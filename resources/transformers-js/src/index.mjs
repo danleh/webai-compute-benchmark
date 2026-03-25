@@ -1,7 +1,7 @@
 import { BenchmarkConnector } from "speedometer-utils/benchmark.mjs";
 import { createSubIteratedSuite } from "speedometer-utils/helpers.mjs";
 import { params } from "speedometer-utils/params.mjs";
-import { pipeline, env, dot, read_audio, AutoTokenizer, AutoModelForSequenceClassification, SiglipVisionModel, AutoImageProcessor, RawImage, SiglipTextModel, softmax } from '@huggingface/transformers';
+import { pipeline, env, dot, read_audio, AutoTokenizer, AutoModelForSequenceClassification, AutoProcessor, RawImage, CLIPTextModelWithProjection, CLIPVisionModelWithProjection, softmax } from '@huggingface/transformers';
 import { KokoroTTS } from "kokoro-js";
 import jfkAudio from '../../media/jfk_1962_0912_spaceeffort.wav';
 import imageWithBackground from '../../media/image.jpg';
@@ -93,7 +93,7 @@ class SpeechRecognition {
     document.getElementById('input').textContent = `Transcribing local audio file.`;
 
     this.audioData = await read_audio(this.audioURL, 16000);
-    
+
     // TODO: Initially we wanted to use distil-whisper/distil-large-v3 model, but the onnx files seems to be broken.
     // We should check if we can resolve this issue or select another model. In the meanwhile, we use Xenova/whisper-small.
     this.model = await pipeline('automatic-speech-recognition', "Xenova/whisper-small", { device: this.device, dtype: "q4" },);
@@ -251,7 +251,7 @@ class ImageClassification {
   }
 }
 
-/*--------- Zero-shot image classification workload using Marqo/marqo-fashionSigLIP ---------*/
+/*--------- Zero-shot image classification workload using Xenova/mobileclip_s0 ---------*/
 
 class ZeroShotImageClassification {
   constructor(device) {
@@ -262,14 +262,14 @@ class ZeroShotImageClassification {
   async init() {
     document.getElementById('device').textContent = this.device;
     document.getElementById('workload').textContent = "zero-shot image classification";
-    document.getElementById('input').textContent = `Classifying an image against the following labels: ${JSON.stringify(this.texts)}`;
+    document.getElementById('input').textContent = `Classifying a local image against the following labels: ${JSON.stringify(this.texts)}`;
     
-    const model_id = "Marqo/marqo-fashionSigLIP";
+    const model_id = "Xenova/mobileclip_s0";
 
-    this.tokenizer = await AutoTokenizer.from_pretrained(model_id, { device: this.device});
-    this.text_model = await SiglipTextModel.from_pretrained(model_id, { device: this.device, dtype: "bnb4" });
-    this.processor = await AutoImageProcessor.from_pretrained(model_id, { device: this.device});
-    this.vision_model = await SiglipVisionModel.from_pretrained(model_id, { device: this.device, dtype: "bnb4" });
+    this.tokenizer = await AutoTokenizer.from_pretrained(model_id, { device: this.device });
+    this.processor = await AutoProcessor.from_pretrained(model_id, { device: this.device });
+    this.text_model = await CLIPTextModelWithProjection.from_pretrained(model_id, { device: this.device, dtype: "q4" });
+    this.vision_model = await CLIPVisionModelWithProjection.from_pretrained(model_id, { device: this.device, dtype: "q4" });
 
     this.image = await RawImage.read(this.imageURL);
   }
@@ -393,8 +393,14 @@ export async function initializeBenchmark(modelType) {
   }
 
   appName = modelConfigs[modelType].description;
-  const benchmark = modelConfigs[modelType].create();
-  await benchmark.init();
+  let benchmark;
+  try {
+    benchmark = modelConfigs[modelType].create();
+    await benchmark.init();
+  } catch (error) {
+    console.error(error);
+  }
+  
 
   /*--------- Running test suites ---------*/
   const suites = {
