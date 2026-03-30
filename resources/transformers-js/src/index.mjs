@@ -1,7 +1,7 @@
 import { BenchmarkConnector } from "speedometer-utils/benchmark.mjs";
 import { createSubIteratedSuite } from "speedometer-utils/helpers.mjs";
 import { params } from "speedometer-utils/params.mjs";
-import { pipeline, env, dot, read_audio, AutoTokenizer, AutoModelForSequenceClassification, AutoProcessor, RawImage, CLIPTextModelWithProjection, CLIPVisionModelWithProjection, softmax } from '@huggingface/transformers';
+import { pipeline, env, dot, read_audio, AutoTokenizer, AutoModelForSequenceClassification, AutoProcessor, RawImage, CLIPTextModelWithProjection, CLIPVisionModelWithProjection, softmax, SamModel, SamProcessor } from '@huggingface/transformers';
 import { KokoroTTS } from "kokoro-js";
 import jfkAudio from '../../media/jfk_1962_0912_spaceeffort.wav';
 import imageWithBackground from '../../media/image.jpg';
@@ -21,6 +21,38 @@ env.allowLocalModels = true;
 
 // Set location of .wasm files so the CDN is not used.
 env.backends.onnx.wasm.wasmPaths = '';
+
+function ensureOutputStyles() {
+  const output = document.getElementById('output');
+  if (output) {
+    output.style.border = '1px solid #ccc';
+    output.style.width = '256px';
+    output.style.height = '256px';
+    output.style.position = 'relative';
+    output.style.display = 'flex';
+    output.style.alignItems = 'center';
+    output.style.justifyContent = 'center';
+  }
+}
+
+async function getVisualOutputCanvas(width, height) {
+  const output = document.getElementById('output');
+  let finalCanvas = output.querySelector('canvas');
+
+  if (!finalCanvas) {
+    finalCanvas = document.createElement('canvas');
+    finalCanvas.style.width = "100%";
+    finalCanvas.style.height = "100%";
+    output.innerHTML = '';
+    output.appendChild(finalCanvas);
+  }
+
+  finalCanvas.width = width;
+  finalCanvas.height = height;
+
+  const ctx = finalCanvas.getContext('2d', { willReadFrequently: true });
+  return { ctx, canvas: finalCanvas };
+}
 
 // TODO: Model loading time is not currently included in the benchmark. We should
 // investigate if the model loading code is different for the different device types.
@@ -117,20 +149,7 @@ class BackgroundRemoval {
     document.getElementById('device').textContent = this.device;
     document.getElementById('workload').textContent = "background removal";
     document.getElementById('input').textContent = `Removing background from local image.`;
-    
-    // Dynamically create and inject the CSS for the output container.
-    const style = document.createElement('style');
-    style.textContent = `
-        #output {
-            border: 1px solid #ccc;
-            width: 256px;
-            height: 256px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-    `;
-    document.head.appendChild(style);
+    ensureOutputStyles();
 
     // TODO: Initially we wanted to use briaai/RMBG-2.0 model, but it has a known issue (https://github.com/microsoft/onnxruntime/issues/21968) cause it to be not usable.
     // We should check later if the issue has been resolved or select another model. In the meanwhile, we will use Xenova/modnet.
@@ -142,23 +161,7 @@ class BackgroundRemoval {
     
     // Prepare result to display
     const offscreenCanvas = await result[0].toCanvas();
-
-    const output = document.getElementById('output');
-    let finalCanvas = output.querySelector('canvas');
-
-    // If canvas doesn't exist, create and append it.
-    if (!finalCanvas) {
-      finalCanvas = document.createElement('canvas');
-      finalCanvas.style.width = "100%";
-      finalCanvas.style.height = "100%";
-      output.innerHTML = '';
-      output.appendChild(finalCanvas);
-    }
-
-      finalCanvas.width = offscreenCanvas.width;
-      finalCanvas.height = offscreenCanvas.height;
-
-    const ctx = finalCanvas.getContext('2d');
+    const { ctx } = await getVisualOutputCanvas(offscreenCanvas.width, offscreenCanvas.height);
     if (ctx) {
       ctx.drawImage(offscreenCanvas, 0, 0);
     } else {
@@ -184,7 +187,7 @@ class TextReranking {
     document.getElementById('device').textContent = this.device;
     document.getElementById('workload').textContent = "text reranking";
     document.getElementById('input').textContent = `"${this.documents}"`;
-    
+
     const model_id = 'mixedbread-ai/mxbai-rerank-base-v1';
     this.model = await AutoModelForSequenceClassification.from_pretrained(model_id, { device: this.device, dtype: "fp32" });
     this.tokenizer = await AutoTokenizer.from_pretrained(model_id);
@@ -197,7 +200,7 @@ class TextReranking {
    * @param {Object} options Options for ranking
    * @param {number} [options.top_k=undefined] Return the top-k documents. If undefined, all documents are returned.
    * @param {number} [options.return_documents=false] If true, also returns the documents. If false, only returns the indices and scores.
-   */
+    */
   async rank(query, documents, {
       top_k = undefined,
       return_documents = false,} = {}) {
@@ -263,7 +266,7 @@ class ZeroShotImageClassification {
     document.getElementById('device').textContent = this.device;
     document.getElementById('workload').textContent = "zero-shot image classification";
     document.getElementById('input').textContent = `Classifying a local image against the following labels: ${JSON.stringify(this.texts)}`;
-    
+
     const model_id = "Xenova/mobileclip_s0";
 
     this.tokenizer = await AutoTokenizer.from_pretrained(model_id, { device: this.device });
@@ -312,6 +315,79 @@ class TextToSpeech {
     const output = document.getElementById('output');
     const durationInMs = (result.audio.length / 24000) * 1000;
     output.textContent = `Generated audio of duration ${durationInMs.toFixed(2)} ms`;
+  }
+}
+
+/*--------- Mask generation workload using Xenova/sam-vit-base model ---------*/
+
+class MaskGeneration {
+  constructor(device) {
+    this.device = device;
+    this.imageURL = imageWithBackground;
+  }
+  async init() {
+    document.getElementById('device').textContent = this.device;
+    document.getElementById('workload').textContent = "mask generation";
+    document.getElementById('input').textContent = `Generating a mask for one positive and one negative marker.`;
+    ensureOutputStyles();
+
+    const model_id = "Xenova/sam-vit-base";
+    this.processor = await SamProcessor.from_pretrained(model_id);
+    this.model = await SamModel.from_pretrained(model_id, {
+      device: this.device,
+      dtype: 'fp32'
+    });
+
+    this.image = await RawImage.read(this.imageURL);
+
+    // First point is origami, second point is hand
+    this.input_points = [[[480, 580], [360, 900]]];
+    // 1 to include, 0 to exclude
+    this.input_labels = [[1, 0]];
+  }
+
+  async run() {
+    const inputs = await this.processor(this.image, { input_points: this.input_points, input_labels: this.input_labels });
+    const outputs = await this.model(inputs);
+
+    const masks = await this.processor.post_process_masks(
+      outputs.pred_masks,
+      inputs.original_sizes,
+      inputs.reshaped_input_sizes
+    );
+
+    const mask = masks[0];
+    const offscreenCanvas = await this.image.toCanvas();
+    const { ctx } = await getVisualOutputCanvas(offscreenCanvas.width, offscreenCanvas.height);
+    if (ctx) {
+      ctx.drawImage(offscreenCanvas, 0, 0);
+
+      const maskData = mask.data;
+
+      const maskDims = mask.dims;
+      const height = maskDims[2];
+      const width = maskDims[3];
+      const maskSize = height * width;
+
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+
+      // The `maskData` contains 3 flattened masks (whole, sub-part, part).
+      // We use the first one (index 0) directly, so no offset is needed.
+      let dataIndex = 0;
+      for (let i = 0; i < maskSize; ++i) {
+        if (maskData[i]) {
+          data[dataIndex] = 0;         // R
+          data[dataIndex + 1] = 212;   // G
+          data[dataIndex + 2] = 255;   // B
+          data[dataIndex + 3] = 153;   // A (approx 60% opacity)
+        }
+        dataIndex += 4;
+      }
+      ctx.putImageData(imageData, 0, 0);
+    } else {
+      console.error("Could not get 2D context from the canvas.");
+    }
   }
 }
 
@@ -381,6 +457,14 @@ const modelConfigs = {
   'text-to-speech-gpu': {
     description: 'Text to speech on gpu',
     create() { return new TextToSpeech('webgpu'); },
+  },
+  'mask-generation-cpu': {
+    description: 'Mask generation on cpu',
+    create() { return new MaskGeneration('wasm'); },
+  },
+  'mask-generation-gpu': {
+    description: 'Mask generation on gpu',
+    create() { return new MaskGeneration('webgpu'); },
   },
 };
 

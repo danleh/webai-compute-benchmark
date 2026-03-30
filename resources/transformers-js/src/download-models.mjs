@@ -1,4 +1,4 @@
-import { env, pipeline, AutoProcessor, AutoTokenizer, CLIPTextModelWithProjection, CLIPVisionModelWithProjection } from '@huggingface/transformers';
+import { env, pipeline, AutoProcessor, AutoTokenizer, CLIPTextModelWithProjection, CLIPVisionModelWithProjection, SamModel, SamProcessor } from '@huggingface/transformers';
 import { KokoroTTS } from "kokoro-js";
 import fs from 'fs';
 import path from 'path';
@@ -124,6 +124,20 @@ async function downloadModels() {
             cache.put(cacheKey);
         }
         console.log(`Successfully checked Xenova/mobileclip_s0`);
+
+        // Download Xenova/sam-vit-base models
+        console.log(`Checking Xenova/sam-vit-base models...`);
+        if (!cache.has('SAM-SamModel-fp32')) {
+            console.log(`Downloading Xenova/sam-vit-base (SamModel, fp32)...`);
+            await SamModel.from_pretrained("Xenova/sam-vit-base", { cache_dir: env.localModelPath, dtype: 'fp32' });
+            cache.put('SAM-SamModel-fp32');
+        }
+        if (!cache.has('SAM-SamProcessor-default')) {
+            console.log(`Downloading Xenova/sam-vit-base (SamProcessor)...`);
+            await SamProcessor.from_pretrained("Xenova/sam-vit-base", { cache_dir: env.localModelPath });
+            cache.put('SAM-SamProcessor-default');
+        }
+        console.log(`Successfully checked Xenova/sam-vit-base`);
 
         // Download onnx-community/Kokoro-82M-v1.0-ONNX model
         console.log(`Starting manual download check for ${KOKORO_REPO}...`);
