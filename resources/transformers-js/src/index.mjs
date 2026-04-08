@@ -128,7 +128,7 @@ class BackgroundRemoval {
     const result = await this.model(this.imageURL);
     
     // Prepare result to display
-    const offscreenCanvas = await result[0].toCanvas();
+    const offscreenCanvas = await result.toCanvas();
     const { ctx } = await getVisualOutputCanvas(offscreenCanvas.width, offscreenCanvas.height);
     if (ctx) {
       ctx.drawImage(offscreenCanvas, 0, 0);
